@@ -6,10 +6,11 @@
 #include <stdlib.h>
 #include <cstring>
 using namespace std;
+int k;
 int gexp[512]; //tabel
 int glog[256];
 #define  prim = 0x11d;
-
+int necc;
 int mult(int x, int y)//inmulteste 2 indici dar fara sa ii bage in gf de ....
 {
 	int z = 0;
@@ -232,10 +233,7 @@ int* gpolydiv(int *dividend, int *divisor, int n, int m, int ecc, int &p)
 }
 int *rscalsyndromes(int * msg, int y, int nsym)
 {
-	//'''Given the received codeword msg and the number of error correcting symbols (nsym), computes the syndromes polynomial.
-	//Mathematically, it's essentially equivalent to a Fourrier Transform (Chien search being the inverse).
-	//# Note the "[0] +" : we add a 0 coefficient for the lowest degree(the constant).This effectively shifts the syndrome, and will shift every computations depending on the syndromes(such as the errors locator polynomial, errors evaluator polynomial, etc.but not the errors positions).
-	//# This is not necessary, you can adapt subsequent computations to start from 0 instead of skipping the first iteration(ie, the often seen range(1, n - k + 1)),
+	
 	int synd[100], i;
 	for (i = 0; i < nsym; i++)
 		synd[i] = 0;
@@ -244,15 +242,15 @@ int *rscalsyndromes(int * msg, int y, int nsym)
 		synd[i] = gpolyeval(msg, y, gpow(2, i));
 
 	}
-	return synd; //# pad with one 0 for mathematical precision(else we can end up with weird calculations sometimes)
+	return synd;
 }
-int * rsmsg(char *msg_in, int nsym)
+int *rsmsg(char *msg_in, int nsym,int &k)
 
 {
 	int l = 0;
 	int i;
 	int pa[500];
-	//'''Reed-Solomon main encoding function'''
+
 	int *gen = rsgenpoly(nsym, l);
 	int c[500];
 	for (i = 0; i < l; i++)
@@ -262,7 +260,7 @@ int * rsmsg(char *msg_in, int nsym)
 	{
 		c[i] = (int)msg_in[i];
 	}
-	//# Pad the message, then divide it by the irreducible generator polynomial
+
 	int remainder;
 	int p;
 	int *msg_out = gpolydiv(c, pa, h, l, l - 1, p);
@@ -277,18 +275,13 @@ int * rsmsg(char *msg_in, int nsym)
 
 		msg[i + h - p + l - 1] = msg_out[i];
 	}
+	k = p;
+	return msg;
+	
 
-	rscalsyndromes(msg, h + l - 1, nsym);
-
-	for (i = 0; i<h; i++)
-		printf("%d ", msg[i]);
-	for (i = h; i < h + l - 1; i++)
-	{
-		printf("%d ", msg[i]);
-	}
+	
 
 
-	return 0;
 }
 #pragma comment(linker, \
   "\"/manifestdependency:type='Win32' "\
@@ -300,7 +293,7 @@ int * rsmsg(char *msg_in, int nsym)
 
 #pragma comment(lib, "ComCtl32.lib")
 int c = 0, d = 0;
-TCHAR text[255];
+CHAR text[255];
 
 LPTSTR  edittxt;
 LPCTSTR lpString;
@@ -319,12 +312,32 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 		case ID_DESPRE_DESPRE:
 		{
-			MessageBox(hDlg, "", "Informatii", 0);
+			MessageBox(hDlg, "Codarea pe care am implementat-o este bazata pe o matrice de 512 elemente care contine toate inmultirile din campul meu galois apoi se formeaza un polinom cu valorile caracterelor care e shiftat la dreapta cu numarul de biti de corectie a erorilor si apoi se imparte cu polinomul generator si restul contine bitii de corectare a erorilor ", "Informatii", 0);
 		}
-		case ID_TIPULDEDATE_TEXT:
 		{
 			c = 1;
 			break;
+		}
+		case ID_NUMARULDESIMBOLURIDECORECTARE_10 :
+		{
+			necc = 10;
+			break;
+
+		}
+		case  ID_NUMARULDESIMBOLURIDECORECTARE_5 :
+		{
+			necc = 5;
+			break;
+		}
+		case ID_NUMARULDESIMBOLURIDECORECTARE_15 :
+		{
+			
+				necc = 15;
+			
+		}
+		case ID_NUMARULDESIMBOLURIDECORECTARE_20:
+		{
+			necc = 20;
 		}
 		case ID_TIPULDEDATE_NUMERE:
 		{
@@ -346,11 +359,110 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			d = 0;
 			break;
 		}
+		case ID_TIPULOPERATIEI_VERIFICARE:
+		{
+			d = 2;
+			break;
+		}
 		case IDC_BUTTON1:
 		{
-
+			log();
 			GetDlgItemText(hDlg, IDC_EDIT1, text, 255);
-			MessageBox(hDlg, text, "edit text", 0);
+			if (d == 0)
+			{
+				int i = 0;
+				int *o;
+				while (text[i] > 0)
+				{
+					i++;
+				}
+				text[i] = NULL;
+				o=rsmsg(text, necc,k);
+				char textul[500],u[50];
+				textul[0] = NULL;
+				for (i = 0; i < k; i++)
+				{
+					 _itoa(o[i],u, 10);
+					 strcat(textul, u);
+					 strcat(textul, " ");
+				}
+				SetDlgItemText(hDlg, IDC_EDIT2,textul);
+
+			}
+			if (d == 2)
+			{
+				GetDlgItemText(hDlg, IDC_EDIT1, text, 255);
+				log();
+				int i = 0;
+				int *o;
+				while (text[i] > 0)
+				{
+					i++;
+				}
+				text[i] = NULL;
+				char *p = strtok(text, " ");
+				int v[500],j=0;
+				v[j] = atoi(p);
+				j++;
+				while (p != NULL)
+				{
+					p = strtok(NULL, " ");
+					if (p == NULL)
+						break;
+					v[j] = atoi(p);
+					j++;
+				}
+				int *r;
+				r=rscalsyndromes(v, j, necc);
+				if (r[0] == 0)
+				{
+					SetDlgItemText(hDlg, IDC_EDIT2, "E corect");
+					break;
+				}
+
+				else
+				{
+					SetDlgItemText(hDlg, IDC_EDIT2, "Nu e corect");
+					break;
+				}
+
+			}
+			if (d == 1)
+			{
+				GetDlgItemText(hDlg, IDC_EDIT1, text, 255);
+				log();
+				int i = 0;
+				int *o;
+				while (text[i] > 0)
+				{
+					i++;
+				}
+				text[i] = NULL;
+				char *p = strtok(text, " ");
+				int v[500], j = 0;
+				v[j] = atoi(p);
+				j++;
+				while (p != NULL)
+				{
+					p = strtok(NULL, " ");
+					if (p == NULL)
+						break;
+					v[j] = atoi(p);
+					j++;
+				}
+				char textul[500], u[50];
+				textul[0] = NULL;
+				for (i = 0; i < j-necc; i++)
+				{
+					textul[i] = (char)v[i];
+				}
+				textul[i] = NULL;
+				SetDlgItemText(hDlg, IDC_EDIT2, textul);
+
+			}
+			//rscalsyndromes(msg, h + l - 1, nsym);
+			//MessageBox(hDlg, text, "edit text", 0);
+			break;
 		}
 		case IDCANCEL:
 			SendMessage(hDlg, WM_CLOSE, 0, 0);
